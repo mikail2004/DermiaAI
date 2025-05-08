@@ -128,5 +128,6 @@ if __name__ == "__main__":
 # --- Predicting Classes with Trained Model ---
     classProbability = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
     for img in userImages:
-        predictions = classProbability.predict()
+        imgCurrent = loadImage(img)
+        predictions = classProbability.predict(imgCurrent)
         print(classLabels[np.argmax(predictions[0])])
