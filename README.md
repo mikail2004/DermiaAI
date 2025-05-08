@@ -1,3 +1,3 @@
 # DermiaAI
 
-# Folder Structure
+## Folder Structure
