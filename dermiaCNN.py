@@ -5,7 +5,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from keras import layers, models
-from keras.preprocessing.image import load_img, img_to_array
+from keras.utils import load_img, img_to_array
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import cv2
@@ -19,7 +19,7 @@ def loadImage(imgPath):
     image = cv2.imread(imgPath, cv2.IMREAD_COLOR) # Use OpenCV to read image from specified path
     image = cv2.resize(image, imgSize, interpolation=cv2.INTER_AREA) # Image resizing to dataset resolution
     image = img_to_array(image) # Convert image to array
-    imgFinal = image.astype('float32')/255.0 # Normalize image
+    imgFinal = image/255.0 # Normalize image
     
     return imgFinal
 
@@ -98,8 +98,8 @@ def cnnModel(labelsTrain, labelsTest, imagesTrain, imagesTest):
     return history, model
 
 if __name__ == "__main__":
-    # print("TensorFlow version:", tf.__version__)
-    # print("GPUs available:", tf.config.list_physical_devices('GPU'))
+    print("TensorFlow version:", tf.__version__)
+    print("GPUs available:", tf.config.list_physical_devices('GPU'))
 
     img1 = "C:/Users/m20mi/Documents/Work/Dermia/nail-fungus.png"
     img2 = "C:/Users/m20mi/Documents/Work/Dermia/chickenpox.jpg"
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     userImages = [img1, img2, img3, img4, img5]
 
     images, labels, classLabels = loadData(dataPath, imgSize) # Call function loadData() to process all data
-    images = images.astype('float32')/255.0 # Normalize images [Scaling pixel values b/w 0 and 1]
+    images = images/255.0 # Normalize images [Scaling pixel values b/w 0 and 1]
     labelsTrain, labelsTest, imagesTrain, imagesTest = train_test_split(labels, images, test_size=0.30)
     history, model = cnnModel(labelsTrain, labelsTest, imagesTrain, imagesTest) # Train model on processed data
 
@@ -120,14 +120,22 @@ if __name__ == "__main__":
     plt.ylabel('Accuracy')
     plt.ylim([0.5, 1])
     plt.legend(loc='lower right')
+    plt.show()
 
     test_loss, test_acc = model.evaluate(imagesTest,  labelsTest, verbose=2)
-
-    print(test_acc*100)
+    print(f"{test_acc*100}% \n")
 
 # --- Predicting Classes with Trained Model ---
     classProbability = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
     for img in userImages:
         imgCurrent = loadImage(img)
-        predictions = classProbability.predict(imgCurrent)
-        print(classLabels[np.argmax(predictions[0])])
+        imgCurrent = np.expand_dims(imgCurrent, axis=0) # Add batch dimension to img shape: (224, 224, 3) to (1, 224, 224, 3)
+        predictions = classProbability.predict(imgCurrent) # Make the actual prediction using model
+        predClass = classLabels[np.argmax(predictions[0])]
+        print(predClass)
+        
+        # Plot image with predicted class
+        image = cv2.imread(img)
+        cv2.imshow(f"Predicted Class: {predClass}", image)
+        cv2.waitKey(120)
+    cv2.destroyAllWindows() # Close all open windows
