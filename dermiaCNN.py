@@ -6,7 +6,10 @@ import numpy as np
 import tensorflow as tf
 from keras import layers, models
 from keras.utils import load_img, img_to_array
+from keras_preprocessing.image import ImageDataGenerator
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 import matplotlib.pyplot as plt
 import cv2
 
@@ -62,7 +65,7 @@ def viewData():
     plt.show()
 
 # --- Creating Model ---
-def cnnModel(labelsTrain, labelsTest, imagesTrain, imagesTest):
+def cnnModel(trainData, valData, classWeightDictionary):
     ''' Max Pooling is a pooling operation that calculates the maximum value for patches of a feature map, 
         and uses it to create a downsampled (pooled) feature map. 
         It is usually used after a convolutional layer. '''
@@ -71,15 +74,22 @@ def cnnModel(labelsTrain, labelsTest, imagesTrain, imagesTest):
     # <layers.Conv2D>: (filters, kernel_size, activation, input_shape)
 
     model = models.Sequential()
-    model.add(layers.Conv2D(imgSize[0], (3, 3), activation='relu', input_shape=(imgSize[0], imgSize[1], 3)))
+
+    # Layer 1
+    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(imgSize[0], imgSize[1], 3)))
     model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D((imgSize[0]*2), (3, 3), activation='relu'))
+
+    # Layer 2
+    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
     model.add(layers.MaxPooling2D((2, 2)))
-    model.add(layers.Conv2D((imgSize[0]*2), (3, 3), activation='relu'))
+
+    # Layer 3
+    model.add(layers.Conv2D(128, (3, 3), activation='relu'))
+    model.add(layers.MaxPooling2D((2, 2)))
 
     # Feed output from last layer into the following dense layers (to perform classification)
     model.add(layers.Flatten())
-    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dense(128, activation='relu'))
     model.add(layers.Dense(9)) # Parameter corresponds to number of classes
 
     #model.summary() # Display architecture of model (The dimensions tend to shrink as you go deeper in the network)
@@ -93,7 +103,7 @@ def cnnModel(labelsTrain, labelsTest, imagesTrain, imagesTest):
     )
 
     # Batch size kept to a small number if exceeding memory allocation
-    history = model.fit(imagesTrain, labelsTrain, batch_size=2, epochs=10, validation_data=(imagesTest, labelsTest))
+    history = model.fit(trainData, validation_data=valData, epochs=30)
 
     return history, model
 
@@ -111,7 +121,24 @@ if __name__ == "__main__":
     images, labels, classLabels = loadData(dataPath, imgSize) # Call function loadData() to process all data
     images = images/255.0 # Normalize images [Scaling pixel values b/w 0 and 1]
     labelsTrain, labelsTest, imagesTrain, imagesTest = train_test_split(labels, images, test_size=0.30)
-    history, model = cnnModel(labelsTrain, labelsTest, imagesTrain, imagesTest) # Train model on processed data
+
+# --- Data Augmentation ---
+    valDataGen = ImageDataGenerator()
+    datasetAugmentor = ImageDataGenerator(
+        rotation_range = 20,
+        zoom_range = 0.15,
+        width_shift_range = 0.2,
+        height_shift_range = 0.2,
+        horizontal_flip = True,
+        fill_mode = 'nearest'
+    )
+    trainData = datasetAugmentor.flow(imagesTrain, labelsTrain, batch_size=2)
+    valData = valDataGen.flow(imagesTest, labelsTest, batch_size=2)
+
+    classWeights = compute_class_weight(class_weight=None, classes=np.unique(labelsTrain), y=labelsTrain)
+    classWeightDictionary = dict(enumerate(classWeights))
+
+    history, model = cnnModel(trainData, valData, classWeightDictionary) # Train model on processed data
 
 # --- Evaluating Trained Model ---
     plt.plot(history.history['accuracy'], label='accuracy')
@@ -127,15 +154,20 @@ if __name__ == "__main__":
 
 # --- Predicting Classes with Trained Model ---
     classProbability = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
-    for img in userImages:
+    plt.figure(figsize=(10,10))
+    for i, img in enumerate(userImages):
+        plt.subplot(1,5,i+1) # Vertical, Horizontal, Index (Subplot shows multiple plots on one figure)
+        plt.xticks([])
+        plt.yticks([])
+        plt.grid(False)
+
         imgCurrent = loadImage(img)
+        plt.imshow(imgCurrent)
+
         imgCurrent = np.expand_dims(imgCurrent, axis=0) # Add batch dimension to img shape: (224, 224, 3) to (1, 224, 224, 3)
         predictions = classProbability.predict(imgCurrent) # Make the actual prediction using model
         predClass = classLabels[np.argmax(predictions[0])]
+
+        plt.xlabel(predClass)
         print(predClass)
-        
-        # Plot image with predicted class
-        image = cv2.imread(img)
-        cv2.imshow(f"Predicted Class: {predClass}", image)
-        cv2.waitKey(120)
-    cv2.destroyAllWindows() # Close all open windows
+    plt.show()
