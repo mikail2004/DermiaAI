@@ -7,9 +7,9 @@ import tensorflow as tf
 from keras import layers, models
 from keras.utils import load_img, img_to_array
 from keras_preprocessing.image import ImageDataGenerator
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from keras.callbacks import EarlyStopping
 import matplotlib.pyplot as plt
 import cv2
 
@@ -66,33 +66,18 @@ def viewData():
 
 # --- Creating Model ---
 def cnnModel(trainData, valData, classWeightDictionary):
-    ''' Max Pooling is a pooling operation that calculates the maximum value for patches of a feature map, 
-        and uses it to create a downsampled (pooled) feature map. 
-        It is usually used after a convolutional layer. '''
+    # Transfer learning with MobileNetV2 (As our dataset has <1000 images per class) 'imagenet'
+    base_model = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
 
-    # <input_shape>: (image_height, image_width, color_channels) - Channels: Black/White=1, Color:3
-    # <layers.Conv2D>: (filters, kernel_size, activation, input_shape)
-    model = models.Sequential()
+    base_model.trainable = False
 
-    # Layer 1
-    model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=(imgSize[0], imgSize[1], 3)))
-    model.add(layers.MaxPooling2D((2, 2)))
-
-    # Layer 2
-    model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-
-    # Layer 3
-    model.add(layers.Conv2D(128, (3, 3), activation='relu'))
-    model.add(layers.MaxPooling2D((2, 2)))
-
-    # Feed output from Layer 3 into the following dense layers (to perform classification)
-    model.add(layers.Flatten())
-    model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.Dense(9, activation='softmax')) 
-    # ^ This final layer outputs class probabilities 
-    # (Parameter corresponds to number of classes)
-    # Add 'Softmax' to turn probabilities into predicted labels
+    model = tf.keras.Sequential([
+        base_model,
+        layers.GlobalAveragePooling2D(),
+        layers.Dense(128, activation='relu'),
+        layers.Dropout(0.3),
+        layers.Dense(9, activation='softmax')
+    ])
 
     #model.summary() # Display architecture of model (The dimensions tend to shrink as you go deeper in the network)
 
@@ -118,7 +103,8 @@ if __name__ == "__main__":
     img3 = "C:/Users/m20mi/Documents/Work/Dermia/X.png"
     img4 = "C:/Users/m20mi/Documents/Work/Dermia/larva.png"
     img5 = "C:/Users/m20mi/Documents/Work/Dermia/IMG_5027.png"
-    userImages = [img1, img2, img3, img4, img5]
+    img6 = "C:/Users/m20mi/Documents/Work/Dermia/Acne_share.png"
+    userImages = [img1, img2, img3, img4, img5, img6]
 
     images, labels, classLabels = loadData(dataPath, imgSize) # Call function loadData() to process all data
     images = images/255.0 # Normalize images [Scaling pixel values b/w 0 and 1]
@@ -142,7 +128,7 @@ if __name__ == "__main__":
     classWeights = compute_class_weight(class_weight=None, classes=np.unique(labelsTrain), y=labelsTrain)
     classWeightDictionary = dict(enumerate(classWeights))
 
-    history, model = cnnModel(trainData, valData, classWeightDictionary) # Train model on processed data
+    history, model = cnnModel(trainData, valData, classWeightDictionary) # Train model on augmented, processed data
 
 # --- Evaluating Trained Model ---
     plt.plot(history.history['accuracy'], label='accuracy')
@@ -159,7 +145,7 @@ if __name__ == "__main__":
 # --- Predicting Classes with Trained Model ---
     plt.figure(figsize=(10,10))
     for i, img in enumerate(userImages):
-        plt.subplot(1,5,i+1) # Vertical, Horizontal, Index (Subplot shows multiple plots on one figure)
+        plt.subplot(1,6,i+1) # Vertical, Horizontal, Index (Subplot shows multiple plots on one figure)
         plt.xticks([])
         plt.yticks([])
         plt.grid(False)
