@@ -72,7 +72,6 @@ def cnnModel(trainData, valData, classWeightDictionary):
 
     # <input_shape>: (image_height, image_width, color_channels) - Channels: Black/White=1, Color:3
     # <layers.Conv2D>: (filters, kernel_size, activation, input_shape)
-
     model = models.Sequential()
 
     # Layer 1
@@ -87,10 +86,13 @@ def cnnModel(trainData, valData, classWeightDictionary):
     model.add(layers.Conv2D(128, (3, 3), activation='relu'))
     model.add(layers.MaxPooling2D((2, 2)))
 
-    # Feed output from last layer into the following dense layers (to perform classification)
+    # Feed output from Layer 3 into the following dense layers (to perform classification)
     model.add(layers.Flatten())
     model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.Dense(9)) # Parameter corresponds to number of classes
+    model.add(layers.Dense(9, activation='softmax')) 
+    # ^ This final layer outputs class probabilities 
+    # (Parameter corresponds to number of classes)
+    # Add 'Softmax' to turn probabilities into predicted labels
 
     #model.summary() # Display architecture of model (The dimensions tend to shrink as you go deeper in the network)
 
@@ -98,12 +100,12 @@ def cnnModel(trainData, valData, classWeightDictionary):
 
     model.compile(
         optimizer='adam',
-        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
         metrics=['accuracy']
     )
 
     # Batch size kept to a small number if exceeding memory allocation
-    history = model.fit(trainData, validation_data=valData, epochs=30)
+    history = model.fit(trainData, validation_data=valData, epochs=30, class_weight=classWeightDictionary)
 
     return history, model
 
@@ -120,7 +122,9 @@ if __name__ == "__main__":
 
     images, labels, classLabels = loadData(dataPath, imgSize) # Call function loadData() to process all data
     images = images/255.0 # Normalize images [Scaling pixel values b/w 0 and 1]
-    labelsTrain, labelsTest, imagesTrain, imagesTest = train_test_split(labels, images, test_size=0.30)
+
+    # xTrain, xTest, yTrain, yTest -> Data is x while labels are y
+    imagesTrain, imagesTest, labelsTrain, labelsTest  = train_test_split(images, labels, test_size=0.30)
 
 # --- Data Augmentation ---
     valDataGen = ImageDataGenerator()
@@ -132,8 +136,8 @@ if __name__ == "__main__":
         horizontal_flip = True,
         fill_mode = 'nearest'
     )
-    trainData = datasetAugmentor.flow(imagesTrain, labelsTrain, batch_size=2)
-    valData = valDataGen.flow(imagesTest, labelsTest, batch_size=2)
+    trainData = datasetAugmentor.flow(imagesTrain, labelsTrain, batch_size=16)
+    valData = valDataGen.flow(imagesTest, labelsTest, batch_size=16)
 
     classWeights = compute_class_weight(class_weight=None, classes=np.unique(labelsTrain), y=labelsTrain)
     classWeightDictionary = dict(enumerate(classWeights))
@@ -153,7 +157,6 @@ if __name__ == "__main__":
     print(f"{test_acc*100}% \n")
 
 # --- Predicting Classes with Trained Model ---
-    classProbability = tf.keras.Sequential([model, tf.keras.layers.Softmax()])
     plt.figure(figsize=(10,10))
     for i, img in enumerate(userImages):
         plt.subplot(1,5,i+1) # Vertical, Horizontal, Index (Subplot shows multiple plots on one figure)
@@ -165,7 +168,7 @@ if __name__ == "__main__":
         plt.imshow(imgCurrent)
 
         imgCurrent = np.expand_dims(imgCurrent, axis=0) # Add batch dimension to img shape: (224, 224, 3) to (1, 224, 224, 3)
-        predictions = classProbability.predict(imgCurrent) # Make the actual prediction using model
+        predictions = model.predict(imgCurrent) # Make the actual prediction using model
         predClass = classLabels[np.argmax(predictions[0])]
 
         plt.xlabel(predClass)
