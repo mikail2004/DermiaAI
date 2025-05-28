@@ -3,8 +3,6 @@ Dermia AI uses convolutional neural networks (CNNs) to classify images of 9 comm
 
 ## Performance Metrics
 Model accuracy: 88%
-
-Training Metrics
 ![alt text](Images/Figure_1.png)
 
 Testing Model with 6 New Images
