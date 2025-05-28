@@ -66,17 +66,24 @@ def viewData():
 
 # --- Creating Model ---
 def cnnModel(trainData, valData, classWeightDictionary):
-    # Transfer learning with MobileNetV2 (As our dataset has <1000 images per class) 'imagenet'
+    """
+    1. MobileNetV2 is loaded with pretrained weights from ImageNet.
+    2. <include_top=False> removes the classification head so we can attach our own.
+    3. <trainable=False> freezes the convolutional base to prevent weight updates during training (ideal for small datasets).
+    """
+
+    # This function builds, compiles, and trains a CNN using 'Transfer Learning'.
+    # Transfer learning with MobileNetV2 (As our dataset has <1000 images per class)
     base_model = tf.keras.applications.MobileNetV2(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
 
     base_model.trainable = False
 
     model = tf.keras.Sequential([
         base_model,
-        layers.GlobalAveragePooling2D(),
-        layers.Dense(128, activation='relu'),
-        layers.Dropout(0.3),
-        layers.Dense(9, activation='softmax')
+        layers.GlobalAveragePooling2D(), # Reduces each feature map to a single number (averages spatial dimensions).
+        layers.Dense(128, activation='relu'), # Fully connected layer for learning non-linear combinations of features.
+        layers.Dropout(0.3), # Prevents overfitting by randomly dropping 30% of neurons during training.
+        layers.Dense(9, activation='softmax') # Output layer with 9 units (for 9 classes) and softmax for multi-class classification.
     ])
 
     #model.summary() # Display architecture of model (The dimensions tend to shrink as you go deeper in the network)
@@ -113,6 +120,7 @@ if __name__ == "__main__":
     imagesTrain, imagesTest, labelsTrain, labelsTest  = train_test_split(images, labels, test_size=0.30)
 
 # --- Data Augmentation ---
+    #  Augment training data to simulate more samples and reduce overfitting.
     valDataGen = ImageDataGenerator()
     datasetAugmentor = ImageDataGenerator(
         rotation_range = 20,
@@ -125,10 +133,13 @@ if __name__ == "__main__":
     trainData = datasetAugmentor.flow(imagesTrain, labelsTrain, batch_size=16)
     valData = valDataGen.flow(imagesTest, labelsTest, batch_size=16)
 
+# --- Weight Balancing ---
+    # To prevent model bias towards majority classes (If some classes have way more data than others)
     classWeights = compute_class_weight(class_weight=None, classes=np.unique(labelsTrain), y=labelsTrain)
     classWeightDictionary = dict(enumerate(classWeights))
 
-    history, model = cnnModel(trainData, valData, classWeightDictionary) # Train model on augmented, processed data
+    # Call model on augmented, processed data
+    history, model = cnnModel(trainData, valData, classWeightDictionary)
 
 # --- Evaluating Trained Model ---
     plt.plot(history.history['accuracy'], label='accuracy')
@@ -160,3 +171,5 @@ if __name__ == "__main__":
         plt.xlabel(predClass)
         print(predClass)
     plt.show()
+
+    model.save('C:/Users/m20mi/Documents/Work/Dermia/Model/dermia_model.h5') # Export model for external use (.h5)
