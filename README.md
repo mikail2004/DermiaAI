@@ -14,7 +14,7 @@ Dataset/
 └── Shingles/
 
 ## Requirements
-Python 3.10.16
+Python 3.10.16 /n
 keras 2.10.0
 matplotlib 3.10.3
 numpy 1.23.5
