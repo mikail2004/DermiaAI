@@ -7,6 +7,7 @@ Model accuracy: 88%
 ![alt text](Images/Figure_1.png)
 
 Testing the Model with 6 New Images
+
 ![alt text](Images/Figure_2.png)
 
 ## Dataset Structure
