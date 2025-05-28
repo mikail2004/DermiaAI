@@ -14,7 +14,8 @@ Dataset/
 └── Shingles/
 
 ## Requirements
-Python 3.10.16 /n
+```
+Python 3.10.16 
 keras 2.10.0
 matplotlib 3.10.3
 numpy 1.23.5
@@ -22,3 +23,4 @@ opencv-python 4.11.0.86
 pillow 11.2.1
 scikit-learn 1.6.1
 tensorflow 2.10.0
+```
