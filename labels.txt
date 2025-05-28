@@ -1,0 +1,9 @@
+0 Acne
+1 Chicken Pox
+2 Eczema
+3 Impetigo
+4 Larva Migrans
+5 Nail Fungus
+6 Ringworms
+7 Shingles
+8 Normal
