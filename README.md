@@ -1,5 +1,5 @@
 # DermiaAI
-Dermia AI uses convolutional neural networks (CNNs) to classify images of 9 common skin conditions. Built with TensorFlow and Keras, the model leverages data augmentation and class balancing to improve performance on a small dataset of 2,078 images. This was accomplished using transfer learning with MobileNetV2. I have included the exported model `dermia_model.h5` and an accompanying set of files to utilize it for classification tasks (`evalModel.py` and `labels.txt`).
+Dermia AI uses convolutional neural networks (CNNs) to classify images of 9 common skin conditions. Built with TensorFlow and Keras, the model leverages data augmentation and class balancing to improve performance on a small custom dataset of 2,078 images. This was accomplished using transfer learning with MobileNetV2. I have included the exported model `dermia_model.h5` and an accompanying set of files to utilize it for classification tasks (`evalModel.py` and `labels.txt`).
 
 ## Performance Metrics
 Model accuracy: 88%
